@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import matplotlib as plt
 import xgboost as xgb
 from xgboost import XGBClassifier
@@ -46,3 +45,11 @@ def importance(model : XGBClassifier) -> None:
     plot.grid(alpha=0.2)
     plot.set_xlabel('Gain', weight = 'bold')
     plot.set_ylabel('Features', weight = 'bold')
+
+#Used to determine the sum of difference between the prediction and the true value. For instance a prediction of 5 vs true value of 1 would have a 4 difference, i.e model is highly off.
+def absoluteAccuracy(predictions : pd.DataFrame, true_val : list[int]) -> None:
+
+    true_val = pd.DataFrame({'true_val': true_val})
+    difference = abs(predictions['prediction']-true_val['true_val'])
+
+    print(f'The absolute accuracy is: {sum(difference)/len(difference):.2f}')

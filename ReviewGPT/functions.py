@@ -1,11 +1,10 @@
 import pandas as pd
-import numpy as np
-import matplotlib as plt
-import xgboost as xgb
-from xgboost import XGBClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
-from sklearn.metrics import confusion_matrix
+import os
+import openai as ai
+from ratelimit import limits, sleep_and_retry
+import datetime
+
+ai.api_key = os.environ.get('AI_API_KEY')
 
 
 key_words = [
@@ -359,19 +358,81 @@ def downloadData(path : str, n : int) -> pd.DataFrame:
 def wordCheck(row : pd.DataFrame, word : str) -> bool:
     return 1 if (word in row['reviewText'].lower() or word in row['summary'].lower()) else 0
 
+#We perform key transformations and predictor creation in this function
 def transformData(data : pd.DataFrame) -> pd.DataFrame:
-    data['helpful_ratio'] = data['helpful'].apply(lambda x: round(x[0] / (x[1]+1), 2))
+
+    #Create new instance of data frame so we can reference original dataframe later
+    transformed_data = data.copy() 
+
+    transformed_data['helpful_ratio'] = transformed_data['helpful'].apply(lambda x: round(x[0] / (x[1]+1), 2))
 
     #Binary response variable
-    data['overall_positive'] = data['overall'].apply(lambda row: 1 if row >= 3 else 0)
+    transformed_data['overall_positive'] = transformed_data['overall'].apply(lambda row: 1 if row >= 3 else 0)
+
+    #Center score variable
+    transformed_data['overall'] = transformed_data['overall'].apply(lambda x: x-1)
 
 
     #Create keyword predictors
     for word in key_words:
-        data[word] = data.apply(lambda row: wordCheck(row, word), axis=1)
+        transformed_data[word] = transformed_data.apply(lambda row: wordCheck(row, word), axis=1)
 
     #Drop cols not needed
     for col in drop_cols:
-        data.drop(col, axis=1, inplace=True)
+        transformed_data.drop(col, axis=1, inplace=True)
 
-    return data
+    return transformed_data
+
+'''
+This function fetches GPT predictions.
+We create a prompt with reviewText inserted.
+
+'''
+def fetchGPT(data : pd.DataFrame, collection : pd.DataFrame, Y_gbm : pd.DataFrame) -> pd.DataFrame:
+
+    #create new instance of data to return.
+    data_return = data.copy()
+    i = 0
+
+    for index, row in data.iterrows():
+        #Make sure we obey API limits
+        time = datetime.datetime.now()
+
+        #We use a counter to give progress reports, and return early to avoid timeout.
+        if i == 25: 
+            print(f"Successfully called 25 prompts. @ {time} Remaining prompts: {len(data_return)}")
+            return data_return, collection
+        i+=1
+
+        review = row['reviewText']
+        title = row['summary']
+
+
+        
+        prompt = f'Here is a product review, what score do you think the person who wrote the review gave the product on a scale of 1 to 5 with 1 being very negative and 5 being very positive. Format your answer as ONLY one character. No words should be present in your output. """{review}""" Also here is the title of the review """{title}"""'
+        
+        try: response = ai.ChatCompletion.create(model = "gpt-3.5-turbo", messages=[{'role': 'user', 'content': prompt}], temperature = 1, max_tokens=1000)
+        except ai.error.RateLimitError: print("API limit reached, please try again in one minute.")
+
+
+        prediction = int(response.choices[0]['message']['content'])-1
+        prediction_binary = 1 if prediction >= 2 else 0
+
+
+        df = pd.DataFrame([{'prediction': prediction, 'prediction_binary': prediction_binary}])
+        collection = pd.concat(objs=[collection, df], ignore_index = True, axis=0)
+        data_return.drop(index, axis=0, inplace=True)
+
+    #Save datasets immediately after result ready.
+    saveCSV(data, 'X_test_binary_gpt')
+    saveCSV(collection, 'predictions_binary_gpt_df')
+    saveCSV(Y_gbm, 'Y_test_binary')
+    print("Done. Predictions ready.")
+
+    return data_return, collection
+
+#Saves csv to results file
+def saveCSV(data : pd.DataFrame, name : str):
+
+    path = r'C:/Users/Luke/MyRepo/ReviewGPT/Results/'+name+r'.csv'
+    data.to_csv(path)
