@@ -46,16 +46,16 @@ Classification Report:
 weighted avg       0.57      0.45      0.49      1000
 
 Score ChatGPT
-Accuracy: 0.35
+Accuracy: 0.569
 Classification Report:
               precision    recall  f1-score   support
 
-           0       0.00      0.00      0.00        55
-           1       0.03      0.06      0.04        36
-           2       0.08      0.08      0.08        85
-           3       0.21      0.44      0.29       207
-           4       0.63      0.40      0.49       617
+           0       0.86      0.35      0.49        55
+           1       0.27      0.47      0.35        36
+           2       0.47      0.46      0.46        85
+           3       0.33      0.71      0.45       207
+           4       0.90      0.56      0.69       617
 
-    accuracy                           0.35      1000
-   macro avg       0.19      0.20      0.18      1000
-weighted avg       0.44      0.35      0.37      1000
+    accuracy                           0.57      1000
+   macro avg       0.57      0.51      0.49      1000
+weighted avg       0.72      0.57      0.60      1000
