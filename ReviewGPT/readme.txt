@@ -1,5 +1,7 @@
 Here are the final results from the models:
 
+prompt = f'Here is a product review, what score do you think the person who wrote the review gave the product on a scale of 1 to 5 with 1 being very negative and 5 being very positive. Format your answer as ONLY one character. No words should be present in your output. """{review}""" Also here is the title of the review """{title}"""'
+
 Binary GBM
 Accuracy: 0.742
 Classification Report:
