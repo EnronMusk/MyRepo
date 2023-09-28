@@ -389,6 +389,7 @@ We create a prompt with reviewText inserted.
 
 '''
 def fetchGPT(data : pd.DataFrame, collection : pd.DataFrame, Y_gbm : pd.DataFrame) -> pd.DataFrame:
+    saveCSV(data, 'X_test_binary_gpt') #Save before erasing test dataset.
 
     #create new instance of data to return.
     data_return = data.copy()
@@ -424,10 +425,9 @@ def fetchGPT(data : pd.DataFrame, collection : pd.DataFrame, Y_gbm : pd.DataFram
         data_return.drop(index, axis=0, inplace=True)
 
     #Save datasets immediately after result ready.
-    saveCSV(data, 'X_test_binary_gpt')
     saveCSV(collection, 'predictions_binary_gpt_df')
     saveCSV(Y_gbm, 'Y_test_binary')
-    print("Done. Predictions ready.")
+    print(f"Done. {len(collection)} predictions ready.")
 
     return data_return, collection
 
