@@ -19,31 +19,31 @@ Classification Report:
 weighted avg       0.90      0.74      0.79      1000
 
 Binary ChatGPT
-Accuracy: 0.831
+Accuracy: 0.947
 Classification Report:
               precision    recall  f1-score   support
 
-           0       0.04      0.03      0.03        91
-           1       0.90      0.91      0.91       909
+           0       0.72      0.69      0.70        91
+           1       0.97      0.97      0.97       909
 
-    accuracy                           0.83      1000
-   macro avg       0.47      0.47      0.47      1000
-weighted avg       0.82      0.83      0.83      1000
+    accuracy                           0.95      1000
+   macro avg       0.84      0.83      0.84      1000
+weighted avg       0.95      0.95      0.95      1000
 
 Score GBM
-Accuracy: 0.45
+Accuracy: 0.481
 Classification Report:
               precision    recall  f1-score   support
 
-           0       0.17      0.45      0.24        55
-           1       0.15      0.28      0.19        36
-           2       0.15      0.22      0.18        85
-           3       0.28      0.31      0.30       207
-           4       0.79      0.54      0.64       617
+           0       0.18      0.38      0.24        55
+           1       0.03      0.06      0.04        36
+           2       0.17      0.29      0.22        85
+           3       0.34      0.37      0.35       207
+           4       0.79      0.58      0.67       617
 
-    accuracy                           0.45      1000
-   macro avg       0.31      0.36      0.31      1000
-weighted avg       0.57      0.45      0.49      1000
+    accuracy                           0.48      1000
+   macro avg       0.30      0.34      0.30      1000
+weighted avg       0.58      0.48      0.52      1000
 
 Score ChatGPT
 Accuracy: 0.569
