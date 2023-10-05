@@ -6,3 +6,6 @@ the actual rating number. However, in both cases it has an edge over the GBM in 
 
 ## Kaggle
 Holds models used in Kaggle competitions.
+
+Competition 1: Placed 500/1500.
+Competition 2:
