@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import math
 from xgboost import XGBClassifier
 
-drop_cols=["id", "hospital_number", "lesion_2", "lesion_3"]
+drop_cols=["id", "hospital_number", "lesion_2", "lesion_3", 'lesion_1']
 
 def downloadData(path : str) -> pd.DataFrame:
     return pd.read_csv(path)
@@ -11,11 +11,35 @@ def downloadData(path : str) -> pd.DataFrame:
 
 #We perform key transformations and predictor creation in this function
 def transformData(data : pd.DataFrame) -> pd.DataFrame:
-
+    def parseLesion(row, num):
+        if row > 0:
+            if len(str(row)): return ('0'+str(row))[num]
+            return str(row)[num]
     #Create new instance of data frame so we can reference original dataframe later
     transformed_data = data.copy() 
 
-    transformed_data['lesion_1'] = transformed_data['lesion_1'].apply(lambda x: math.log(x) if x > 0 else 0)
+    lesion_list = transformed_data['lesion_1']
+
+    for idx, n in enumerate(lesion_list):
+        n_str = str(n)
+        if len(n_str) > 4:
+            if int(n_str[0:2]) > 11:
+                transformed_data.at[idx, 'lesion_1_site'] = n_str[0]
+                transformed_data.at[idx, 'lesion_1_type'] = n_str[1]
+                transformed_data.at[idx, 'lesion_1_subtype'] = n_str[2]
+                transformed_data.at[idx, 'lesion_1_specific_code'] = n_str[3:]
+            else:
+                transformed_data.at[idx, 'lesion_1_site'] = n_str[0:2]
+                transformed_data.at[idx, 'lesion_1_type'] = n_str[2]
+                transformed_data.at[idx, 'lesion_1_subtype'] = n_str[3]
+                transformed_data.at[idx, 'lesion_1_specific_code'] = n_str[4]
+        else:
+            transformed_data.at[idx, 'lesion_1_site'] = str(int(n // 1000))
+            transformed_data.at[idx, 'lesion_1_type'] = str(int((n % 1000) // 100))
+            transformed_data.at[idx, 'lesion_1_subtype'] = str(int((n % 100) // 10))
+            transformed_data.at[idx, 'lesion_1_specific_code'] = str(int(n % 10))
+    
+    transformed_data['lesion_2_ind'] = transformed_data['lesion_2'].apply(lambda x: 1 if x > 0 else 0)   
 
     #Drop cols not needed
     for col in drop_cols:
@@ -42,6 +66,15 @@ def frequencyHistogram(colname : str, data : pd.DataFrame):
     plot.set_title(f'Overall {colname} Distribution')
     plt.show()
     
+
+
+def imputeCols(data: pd.DataFrame) -> pd.DataFrame:
+
+        for col in data.columns:
+            if isColumnCategorical(data[col], col): categorical_cols.append(col)
+
+
+        return data
 #Iterates through each column and creates dummies for categorical columns.
 def createDummyVariables(data: pd.DataFrame) -> pd.DataFrame:
     categorical_cols = []
@@ -55,7 +88,7 @@ def createDummyVariables(data: pd.DataFrame) -> pd.DataFrame:
 #Simply finds out if a column is categorical
 def isColumnCategorical(data : pd.Series, colname : str) -> bool:
 
-    if len(data.value_counts()) > 10: return False
+    if len(data.value_counts()) > 12: return False
     return True
 
 #Create our response variable.
