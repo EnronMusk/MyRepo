@@ -1,8 +1,12 @@
 import pandas as pd
 import os
 import openai as ai
-from ratelimit import limits, sleep_and_retry
 import datetime
+import matplotlib.pyplot as plt
+from collections import Counter
+import torch
+from torch import nn
+import re
 
 ai.api_key = os.environ.get('AI_API_KEY')
 
@@ -355,6 +359,7 @@ drop_cols=["reviewerID", "asin", "reviewerName", "helpful", "reviewText", "summa
 def downloadData(path : str, n : int) -> pd.DataFrame:
     return pd.read_json(path, lines=True).head(n)
 
+#Checks if a given word is in the review title or review body, returns 1 if true 0 else.
 def wordCheck(row : pd.DataFrame, word : str) -> bool:
     return 1 if (word in row['reviewText'].lower() or word in row['summary'].lower()) else 0
 
@@ -436,3 +441,97 @@ def saveCSV(data : pd.DataFrame, name : str):
 
     path = r'C:/Users/Luke/MyRepo/ReviewGPT/Results/'+name+r'.csv'
     data.to_csv(path)
+
+#Data transform for the advanced model
+def advTransformData(data : pd.DataFrame) -> pd.DataFrame:
+
+    #Create new instance of data frame so we can reference original dataframe later
+    transformed_data = data.copy() 
+
+    #Binary response variable
+    transformed_data['overall_positive'] = transformed_data['overall'].apply(lambda row: 1 if row >= 3 else 0)
+
+    #Center score variable
+    transformed_data['overall'] = transformed_data['overall'].apply(lambda x: x-1)
+
+    word_list = createWordList(transformed_data)
+
+    #Create keyword predictors
+    for word in word_list:
+        print(f"create columns {word}")
+        transformed_data[word] = transformed_data.apply(lambda row: wordCheck(row, word), axis=1)
+        if len(transformed_data.columns) >= 2000: break
+
+    #Drop cols not needed
+    for col in drop_cols:
+        transformed_data.drop(col, axis=1, inplace=True)
+
+    return transformed_data
+
+
+#Creates a list of all possible words in the reviews (includes all)
+def createWordList(data : pd.DataFrame) -> list[str]:
+    adv_key_words = Counter()
+
+    for index, row in data.iterrows():
+
+        
+        words_raw = re.sub(r'[^a-zA-Z ]', '', row['reviewText'])
+        words_raw = words_raw.lower()
+        words = words_raw.split()
+
+        #Searches for words in the review, if they are not in dict then add else iterate counter.
+        for word in words:
+            if word not in ['how', 'who', 'what', 'when', 'where', 'why', 'is', 'the', 'a', 'an', 'and', 'to', 'with', 'in', 'so']: adv_key_words[word] +=1
+
+    return dropRareWords(adv_key_words, 50)
+
+#This function drops infrequency words from the dictionary
+def dropRareWords(dict : dict[str, int], n : int) -> list[str]:
+    dict_mod = dict.copy()
+
+    for key in dict.keys():
+        if dict.get(key) < n: dict_mod.pop(key)
+
+    return dict_mod.keys()
+
+#PyTorch implementation of a nn
+class NeuralNetwork(nn.Module):
+    def __init__(self, n_input : int, n_hidden_layer : int, n_output : int, learning_rate : float):
+        super().__init__()
+
+        #Setup the inputs and hidden layer and output
+        self.model = nn.Sequential(
+            nn.Linear(n_input, n_hidden_layer),
+            nn.ReLU(),
+            nn.Linear(n_hidden_layer, n_hidden_layer),
+            nn.ReLU(),
+            nn.Linear(n_hidden_layer, n_hidden_layer),
+            nn.ReLU(),
+            nn.Linear(n_hidden_layer, n_hidden_layer),
+            nn.ReLU(),
+            nn.Linear(n_hidden_layer, n_output),
+            nn.Sigmoid()
+        )
+        self.loss_function = nn.BCELoss()
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
+    
+    def train(self, x_train : pd.DataFrame, y_train : pd.DataFrame, batch_size : int):
+        losses = []
+
+        for _ in range(batch_size):
+            pred_y = self.model(x_train)
+            pred_y = torch.squeeze(pred_y, 1)
+            loss = self.loss_function(pred_y, y_train)
+            losses.append(loss.item())
+
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+        #Plots training summary results
+        plt.plot(losses)
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.title("Training Loss Distribution")
+        plt.show()
