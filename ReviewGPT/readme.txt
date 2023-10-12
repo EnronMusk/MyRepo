@@ -30,6 +30,18 @@ Classification Report:
    macro avg       0.84      0.83      0.84      1000
 weighted avg       0.95      0.95      0.95      1000
 
+Binary Neural Network
+Accuracy: 0.8578993821712269
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.85      0.86      0.86      1133
+           1       0.86      0.85      0.86      1133
+
+    accuracy                           0.86      2266
+   macro avg       0.86      0.86      0.86      2266
+weighted avg       0.86      0.86      0.86      2266
+
 Score GBM
 Accuracy: 0.481
 Classification Report:
