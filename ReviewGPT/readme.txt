@@ -6,7 +6,7 @@ prompt = f'Here is a product review, what score do you think the person who wrot
 Promp tried with no difference in results:
 prompt = f'Here is a product review, rate the review on a scale of 1 to 5 with 1 being very negative and 5 being very positive. Format your answer as ONLY one character. No words should be present in your output. """{review}""" Also here is the title of the review """{title}"""'
 
-Binary GBM
+## Binary GBM
 Accuracy: 0.742
 Classification Report:
               precision    recall  f1-score   support
@@ -18,7 +18,7 @@ Classification Report:
    macro avg       0.59      0.73      0.59      1000
 weighted avg       0.90      0.74      0.79      1000
 
-Binary ChatGPT
+## Binary ChatGPT
 Accuracy: 0.947
 Classification Report:
               precision    recall  f1-score   support
@@ -30,7 +30,7 @@ Classification Report:
    macro avg       0.84      0.83      0.84      1000
 weighted avg       0.95      0.95      0.95      1000
 
-Binary Neural Network
+## Binary Neural Network
 Accuracy: 0.8578993821712269
 Classification Report:
               precision    recall  f1-score   support
@@ -42,7 +42,7 @@ Classification Report:
    macro avg       0.86      0.86      0.86      2266
 weighted avg       0.86      0.86      0.86      2266
 
-Score GBM
+## Score GBM
 Accuracy: 0.481
 Classification Report:
               precision    recall  f1-score   support
@@ -57,7 +57,7 @@ Classification Report:
    macro avg       0.30      0.34      0.30      1000
 weighted avg       0.58      0.48      0.52      1000
 
-Score ChatGPT
+## Score ChatGPT
 Accuracy: 0.569
 Classification Report:
               precision    recall  f1-score   support
