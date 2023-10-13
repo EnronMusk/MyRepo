@@ -7,16 +7,16 @@ Promp tried with no difference in results:
 prompt = f'Here is a product review, rate the review on a scale of 1 to 5 with 1 being very negative and 5 being very positive. Format your answer as ONLY one character. No words should be present in your output. """{review}""" Also here is the title of the review """{title}"""'
 
 ## Binary GBM
-Accuracy: 0.742
+Accuracy: 0.8562
 Classification Report:
               precision    recall  f1-score   support
 
-           0       0.22      0.71      0.34        91
-           1       0.96      0.74      0.84       909
+           0       0.42      0.59      0.49      1180
+           1       0.94      0.89      0.92      8820
 
-    accuracy                           0.74      1000
-   macro avg       0.59      0.73      0.59      1000
-weighted avg       0.90      0.74      0.79      1000
+    accuracy                           0.86     10000
+   macro avg       0.68      0.74      0.70     10000
+weighted avg       0.88      0.86      0.87     10000
 
 ## Binary ChatGPT
 Accuracy: 0.947
@@ -71,3 +71,18 @@ Classification Report:
     accuracy                           0.57      1000
    macro avg       0.57      0.51      0.49      1000
 weighted avg       0.72      0.57      0.60      1000
+
+## Score Nerual Network (non ordinal)
+Accuracy: 0.5261
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.12      0.16      0.14       653
+           1       0.08      0.07      0.08       479
+           2       0.03      0.00      0.00       798
+           3       0.24      0.14      0.17      2041
+           4       0.64      0.80      0.71      6029
+
+    accuracy                           0.53     10000
+   macro avg       0.22      0.23      0.22     10000
+weighted avg       0.45      0.53      0.48     10000
