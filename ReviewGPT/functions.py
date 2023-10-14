@@ -7,6 +7,8 @@ from collections import Counter
 import torch
 from torch import nn
 import re
+import numpy as np
+import copy
 
 ai.api_key = os.environ.get('AI_API_KEY')
 
@@ -466,6 +468,8 @@ def advTransformData(data : pd.DataFrame) -> pd.DataFrame:
     for col in drop_cols:
         transformed_data.drop(col, axis=1, inplace=True)
 
+    
+
     return transformed_data
 
 
@@ -482,7 +486,7 @@ def createWordList(data : pd.DataFrame) -> list[str]:
 
         #Searches for words in the review, if they are not in dict then add else iterate counter.
         for word in words:
-            if word not in ['how', 'who', 'what', 'when', 'where', 'why', 'is', 'the', 'a', 'an', 'and', 'to', 'with', 'in', 'so']: adv_key_words[word] +=1
+            if word not in ['how', 'who', 'what', 'when', 'where', 'why', 'is', 'the', 'a', 'an', 'and', 'to', 'with', 'in', 'so', 'overall', 'overall_positive']: adv_key_words[word] +=1
 
     return dropRareWords(adv_key_words, 50)
 
@@ -513,10 +517,11 @@ class NeuralNetwork(nn.Module):
             nn.Linear(n_hidden_layer, n_output),
             nn.Sigmoid()
         )
+        self.model.cuda()
         self.loss_function = nn.BCELoss()
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
     
-    def train(self, x_train : pd.DataFrame, y_train : pd.DataFrame, batch_size : int):
+    def train(self, x_train : torch.Tensor, y_train : torch.Tensor, batch_size : int):
         losses = []
 
         for _ in range(batch_size):
@@ -535,3 +540,202 @@ class NeuralNetwork(nn.Module):
         plt.xlabel('epoch')
         plt.title("Training Loss Distribution")
         plt.show()
+
+class ScoreNeuralNetwork(nn.Module):
+    def __init__(self, n_input : int, n_hidden_layer : int, n_output : int, learning_rate : float, weights : torch.Tensor):
+        super().__init__()
+
+        #Setup the inputs and hidden layer and output
+        self.model = nn.Sequential(
+            nn.Linear(n_input, n_hidden_layer, bias = False),
+            nn.ReLU(),
+            nn.Linear(n_input, n_hidden_layer, bias = False),
+            nn.ReLU(),
+            nn.Linear(n_input, n_hidden_layer, bias = False),
+            nn.ReLU(),
+            nn.Linear(n_hidden_layer, n_output, bias = False),
+            nn.Sigmoid()
+        )
+        self.model.cuda()
+        self.loss_function = nn.CrossEntropyLoss(weight = weights)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
+    
+    def train(self, x_train : torch.Tensor, y_train : torch.Tensor, batch_size : int, x_test : torch.Tensor, y_test : torch.Tensor) -> None:
+
+        train_losses = []
+        test_losses = []
+
+        train_accs = []
+        test_accs = []
+
+        best_acc = 0
+        best_iter = 0
+        best_model = None
+
+        for i in range(batch_size):
+            self.model.train() #Put model in training mode
+
+            pred_y = self.model(x_train)
+            pred_y = torch.squeeze(pred_y, 1)
+
+            train_loss = self.loss_function(pred_y, y_train)
+            train_acc = (torch.argmax(pred_y, 1) == torch.argmax(y_train, 1)).float().mean()
+            train_accs.append(float(train_acc))
+            train_losses.append(float(train_loss))
+
+            self.optimizer.zero_grad()
+            train_loss.backward()
+            self.optimizer.step()
+        
+            #Review performance on test dataset. (no training here)
+            self.model.eval() #Fix the optimzier and training loss.
+
+            pred_y = self.model(x_test)
+            pred_y = torch.squeeze(pred_y, 1)
+
+            test_loss = self.loss_function(pred_y, y_test)
+            test_acc = (torch.argmax(pred_y, 1) == torch.argmax(y_test, 1)).float().mean()
+            test_accs.append(test_acc.item())
+            test_losses.append(test_loss.item())
+
+            if i%250 == 249: print(f'250 iterations complete, current test accuracy: {test_acc:.2f}, curr entropy: {train_loss}')
+            if test_acc > best_acc: 
+                best_acc = test_acc
+                best_iter = i
+                best_model = copy.deepcopy(self.model.state_dict())
+
+        self.model.load_state_dict(best_model)
+        #Plots training summary results on loss function
+        plt.plot(train_losses, color='red', label='train')
+        plt.plot(test_losses, color='black', label='test')
+        plt.grid(alpha=0.3)
+        plt.ylabel('loss',fontweight='bold')
+        plt.xlabel('iteration',fontweight='bold')
+        plt.title("Training and Test Loss Distribution")
+        plt.legend()
+        plt.show()
+
+        #Plots training summary results on accuracy
+        plt.plot(train_accs, color='red', label='train')
+        plt.plot(test_accs, color='black', label='test')
+        plt.grid(alpha=0.3)
+        plt.ylabel('accuracy',fontweight='bold')
+        plt.xlabel('iteration',fontweight='bold')
+        plt.title("Training and Test Accuracy Distribution")
+        plt.legend()
+        plt.show()
+        print(f'best accuracy achieved at iteration {best_iter} with accuracy {best_acc:.2f}')
+
+#Here we create a custom, ordinal encoder. This forces the NN to train on the classes as a oridinal set.
+def ordinalEncoder(response :  pd.DataFrame, inverse = False) -> pd.DataFrame:
+
+    response = response.values.tolist()
+    encoder_mapping = {0 : [0,0,0,0], 1 : [1,0,0,0], 2 : [1,1,0,0], 3 : [1,1,1,0], 4 : [1,1,1,1]}
+    encoded_response = []
+
+    #Perform inverse mapping for predictions
+    if inverse:
+        inv_encoder_mapping = {str(val): key for key, val in encoder_mapping.items()} #Use string as dictionary keys cant be lists
+
+        for row in response:
+            encoded_response.append(inv_encoder_mapping[str(row)])
+    else:
+        encoded_response = []
+
+        for row in response:
+            encoded_response.append(encoder_mapping[row])
+
+    return pd.DataFrame(encoded_response)
+
+def inverseDummies(response : pd.DataFrame) -> pd.DataFrame:
+
+    response = response.values.tolist()
+    encoder_mapping = {0 : [1,0,0,0,0], 1 : [0,1,0,0,0], 2 : [0,0,1,0,0], 3 : [0,0,0,1,0], 4 : [0,0,0,0,1]}
+    inv_encoder_mapping = {str(val): key for key, val in encoder_mapping.items()}
+    encoded_response = []
+
+    for row in response:
+        encoded_response.append(inv_encoder_mapping[str(row)])
+
+    return pd.DataFrame(encoded_response)
+
+class ScoreNeuralNetworkOrdinal(nn.Module):
+    def __init__(self, n_input : int, n_hidden_layer : int, n_output : int, learning_rate : float, weights : torch.Tensor):
+        super().__init__()
+
+        #Setup the inputs and hidden layer and output
+        self.model = nn.Sequential(
+            nn.Linear(n_input, n_hidden_layer, bias = False),
+            nn.ReLU(),
+            nn.Linear(n_hidden_layer, n_output, bias = False),
+            nn.Sigmoid()
+        )
+        self.model.cuda()
+        self.loss_function = nn.CrossEntropyLoss(weight = weights)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+    
+    def train(self, x_train : torch.Tensor, y_train : torch.Tensor, batch_size : int, x_test : torch.Tensor, y_test : torch.Tensor) -> None:
+
+        train_losses = []
+        test_losses = []
+
+        train_accs = []
+        test_accs = []
+
+        best_acc = 0
+        best_iter = 0
+        best_model = None
+
+        for i in range(batch_size):
+            self.model.train() #Put model in training mode
+
+            pred_y = self.model(x_train)
+            pred_y = torch.squeeze(pred_y, 1)
+
+            train_loss = self.loss_function(pred_y, y_train)
+            train_acc = (torch.argmax(pred_y, 1) == (torch.sum(y_train, dim=1)-1)).float().mean()
+            train_accs.append(float(train_acc))
+            train_losses.append(float(train_loss))
+
+            self.optimizer.zero_grad()
+            train_loss.backward()
+            self.optimizer.step()
+        
+            #Review performance on test dataset. (no training here)
+            self.model.eval() #Fix the optimzier and training loss.
+
+            pred_y = self.model(x_test)
+            pred_y = torch.squeeze(pred_y, 1)
+
+            test_loss = self.loss_function(pred_y, y_test)
+            test_acc = (torch.argmax(pred_y, 1) == (torch.sum(y_test, dim=1)-1)).float().mean()
+            test_accs.append(test_acc.item())
+            test_losses.append(test_loss.item())
+
+            if i%250 == 249: print(f'250 iterations complete, current test accuracy: {test_acc:.2f}, curr entropy: {train_loss}')
+            if test_acc > best_acc: 
+                best_acc = test_acc
+                best_iter = i
+                best_model = copy.deepcopy(self.model.state_dict())
+
+        self.model.load_state_dict(best_model)
+        #Plots training summary results on loss function
+        plt.plot(train_losses, color='red', label='train')
+        plt.plot(test_losses, color='black', label='test')
+        plt.grid(alpha=0.3)
+        plt.ylabel('loss',fontweight='bold')
+        plt.xlabel('iteration',fontweight='bold')
+        plt.title("Training and Test Loss Distribution")
+        plt.legend()
+        plt.show()
+
+        #Plots training summary results on accuracy
+        plt.plot(train_accs, color='red', label='train')
+        plt.plot(test_accs, color='black', label='test')
+        plt.grid(alpha=0.3)
+        plt.ylabel('accuracy',fontweight='bold')
+        plt.xlabel('iteration',fontweight='bold')
+        plt.title("Training and Test Accuracy Distribution")
+        plt.legend()
+        plt.show()
+        print(f'best accuracy achieved at iteration {best_iter} with accuracy {best_acc:.2f}')

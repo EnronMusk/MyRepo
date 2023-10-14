@@ -22,7 +22,7 @@ def frequencyHistogram(colname : str, data : pd.DataFrame):
 #Prints simple diagnostics
 def accuracy(Y_test : pd.DataFrame, predictions : list) -> None:
     accuracy = accuracy_score(Y_test, predictions)
-    report = classification_report(Y_test, predictions)
+    report = classification_report(Y_test, predictions, zero_division=0)
 
     print(f'Accuracy: {accuracy}')
     print(f'Classification Report:\n{report}')
@@ -52,4 +52,6 @@ def absoluteAccuracy(predictions : pd.DataFrame, true_val : list[int]) -> None:
     true_val = pd.DataFrame({'true_val': true_val})
     difference = abs(predictions['prediction']-true_val['true_val'])
 
-    print(f'The absolute accuracy is: {sum(difference)/len(difference):.2f}')
+    print(f'The absolute accuracy is: {sum(difference)/len(difference)}')
+
+
