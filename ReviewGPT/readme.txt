@@ -73,16 +73,16 @@ Classification Report:
 weighted avg       0.72      0.57      0.60      1000
 
 ## Score Nerual Network (non ordinal)
-Accuracy: 0.5261
+Accuracy: 0.5232
 Classification Report:
               precision    recall  f1-score   support
 
-           0       0.12      0.16      0.14       653
-           1       0.08      0.07      0.08       479
-           2       0.03      0.00      0.00       798
-           3       0.24      0.14      0.17      2041
-           4       0.64      0.80      0.71      6029
+           0       0.10      0.06      0.08       653
+           1       0.13      0.25      0.17       479
+           2       0.00      0.00      0.00       798
+           3       0.22      0.22      0.22      2041
+           4       0.70      0.77      0.73      6029
 
-    accuracy                           0.53     10000
-   macro avg       0.22      0.23      0.22     10000
-weighted avg       0.45      0.53      0.48     10000
+    accuracy                           0.52     10000
+   macro avg       0.23      0.26      0.24     10000
+weighted avg       0.48      0.52      0.50     10000
