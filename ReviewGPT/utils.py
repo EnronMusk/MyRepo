@@ -4,6 +4,7 @@ import xgboost as xgb
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import ConfusionMatrixDisplay
 
 
 #Plots a simple frequency histogram
@@ -27,7 +28,7 @@ def accuracy(Y_test : pd.DataFrame, predictions : list) -> None:
     print(f'Accuracy: {accuracy}')
     print(f'Classification Report:\n{report}')
 
-#Creates and prints a simple confusion matrix
+#Creates and prints a simple confusion matrix with diagram
 def confusionMatrix(Y_test : pd.DataFrame, predictions : list) -> None:
     tn, fp, fn, tp = confusion_matrix(Y_test, predictions).ravel()
 
@@ -38,6 +39,10 @@ def confusionMatrix(Y_test : pd.DataFrame, predictions : list) -> None:
     print(f"False Negatives: {fn}")
     print(f"True Positives: {tp}")
     print(f"True Negatives: {tn}")
+
+    cm = confusion_matrix(Y_test, predictions)
+    disp = ConfusionMatrixDisplay(confusion_matrix = cm)
+    disp.plot()
 
 #Prints importance scores of features
 def importance(model : XGBClassifier) -> None:

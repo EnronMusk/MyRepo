@@ -667,11 +667,13 @@ class ScoreNeuralNetworkOrdinal(nn.Module):
         self.model = nn.Sequential(
             nn.Linear(n_input, n_hidden_layer, bias = False),
             nn.ReLU(),
+            nn.Linear(n_input, n_hidden_layer, bias = False),
+            nn.ReLU(),
             nn.Linear(n_hidden_layer, n_output, bias = False),
             nn.Sigmoid()
         )
         self.model.cuda()
-        self.loss_function = nn.CrossEntropyLoss(weight = weights)
+        self.loss_function = nn.BCELoss(weight = weights)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
     
     def train(self, x_train : torch.Tensor, y_train : torch.Tensor, batch_size : int, x_test : torch.Tensor, y_test : torch.Tensor) -> None:
