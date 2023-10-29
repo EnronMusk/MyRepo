@@ -500,7 +500,7 @@ def dropRareWords(dict : dict[str, int], n : int) -> list[str]:
     return dict_mod.keys()
 
 #PyTorch implementation of a nn
-class NeuralNetwork(nn.Module):
+class NeuralNetworkBinary(nn.Module):
     def __init__(self, n_input : int, n_hidden_layer : int, n_output : int, learning_rate : float):
         super().__init__()
 
@@ -521,25 +521,71 @@ class NeuralNetwork(nn.Module):
         self.loss_function = nn.BCELoss()
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
     
-    def train(self, x_train : torch.Tensor, y_train : torch.Tensor, batch_size : int):
-        losses = []
+    def train(self, x_train : torch.Tensor, y_train : torch.Tensor, batch_size : int, x_test : torch.Tensor, y_test : torch.Tensor) -> None:
 
-        for _ in range(batch_size):
+        train_losses = []
+        test_losses = []
+
+        train_accs = []
+        test_accs = []
+
+        best_acc = 0
+        best_iter = 0
+        best_model = None
+
+        for i in range(batch_size):
+            self.model.train() #Put model in training mode
+
             pred_y = self.model(x_train)
             pred_y = torch.squeeze(pred_y, 1)
-            loss = self.loss_function(pred_y, y_train)
-            losses.append(loss.item())
+
+            train_loss = self.loss_function(pred_y, y_train)
+            train_acc = (torch.round(pred_y) == y_train).float().mean()
+            train_accs.append(float(train_acc))
+            train_losses.append(float(train_loss))
 
             self.optimizer.zero_grad()
-            loss.backward()
+            train_loss.backward()
             self.optimizer.step()
+        
+            #Review performance on test dataset. (no training here)
+            self.model.eval() #Fix the optimzier and training loss.
 
-        #Plots training summary results
-        plt.plot(losses)
-        plt.ylabel('loss')
-        plt.xlabel('epoch')
-        plt.title("Training Loss Distribution")
+            pred_y = self.model(x_test)
+            pred_y = torch.squeeze(pred_y, 1)
+
+            test_loss = self.loss_function(pred_y, y_test)
+            test_acc = (torch.round(pred_y) == y_test).float().mean()
+            test_accs.append(test_acc.item())
+            test_losses.append(test_loss.item())
+
+            if i%250 == 249: print(f'250 iterations complete, current test accuracy: {test_acc:.2f}, curr entropy: {train_loss}')
+            if test_acc > best_acc: 
+                best_acc = test_acc
+                best_iter = i
+                best_model = copy.deepcopy(self.model.state_dict())
+
+        self.model.load_state_dict(best_model)
+        #Plots training summary results on loss function
+        plt.plot(train_losses, color='red', label='train')
+        plt.plot(test_losses, color='black', label='test')
+        plt.grid(alpha=0.3)
+        plt.ylabel('loss',fontweight='bold')
+        plt.xlabel('iteration',fontweight='bold')
+        plt.title("Training and Test Loss Distribution")
+        plt.legend()
         plt.show()
+
+        #Plots training summary results on accuracy
+        plt.plot(train_accs, color='red', label='train')
+        plt.plot(test_accs, color='black', label='test')
+        plt.grid(alpha=0.3)
+        plt.ylabel('accuracy',fontweight='bold')
+        plt.xlabel('iteration',fontweight='bold')
+        plt.title("Training and Test Accuracy Distribution")
+        plt.legend()
+        plt.show()
+        print(f'best accuracy achieved at iteration {best_iter} with accuracy {best_acc:.2f}')
 
 class ScoreNeuralNetwork(nn.Module):
     def __init__(self, n_input : int, n_hidden_layer : int, n_output : int, learning_rate : float, weights : torch.Tensor):
@@ -665,16 +711,14 @@ class ScoreNeuralNetworkOrdinal(nn.Module):
 
         #Setup the inputs and hidden layer and output
         self.model = nn.Sequential(
-            nn.Linear(n_input, n_hidden_layer, bias = False),
+            nn.Linear(n_input, n_hidden_layer, bias = True),
             nn.ReLU(),
-            nn.Linear(n_input, n_hidden_layer, bias = False),
-            nn.ReLU(),
-            nn.Linear(n_hidden_layer, n_output, bias = False),
+            nn.Linear(n_hidden_layer, n_output, bias = True),
             nn.Sigmoid()
         )
         self.model.cuda()
-        self.loss_function = nn.BCELoss(weight = weights)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.loss_function = nn.CrossEntropyLoss(weight = weights)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
     
     def train(self, x_train : torch.Tensor, y_train : torch.Tensor, batch_size : int, x_test : torch.Tensor, y_test : torch.Tensor) -> None:
 
@@ -695,7 +739,7 @@ class ScoreNeuralNetworkOrdinal(nn.Module):
             pred_y = torch.squeeze(pred_y, 1)
 
             train_loss = self.loss_function(pred_y, y_train)
-            train_acc = (torch.argmax(pred_y, 1) == (torch.sum(y_train, dim=1)-1)).float().mean()
+            train_acc = (torch.argmax(torch.round(pred_y),1) == (torch.sum(y_train, dim=1))).float().mean()
             train_accs.append(float(train_acc))
             train_losses.append(float(train_loss))
 
@@ -710,7 +754,7 @@ class ScoreNeuralNetworkOrdinal(nn.Module):
             pred_y = torch.squeeze(pred_y, 1)
 
             test_loss = self.loss_function(pred_y, y_test)
-            test_acc = (torch.argmax(pred_y, 1) == (torch.sum(y_test, dim=1)-1)).float().mean()
+            test_acc = (torch.argmax(torch.round(pred_y),1) == (torch.sum(y_test, dim=1))).float().mean()
             test_accs.append(test_acc.item())
             test_losses.append(test_loss.item())
 
