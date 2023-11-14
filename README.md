@@ -5,8 +5,5 @@ This project compares ChatGPT review rating prediction performance to GBM and ne
 the actual rating number. However, in both cases it has an edge over the GBM and neural network in accuracy. ChatGPT 4.0 might have better results in rating prediction.
 
 ## Kaggle
-Holds models used in Kaggle competitions.
+Holds models used in Kaggle competitions. Not competitve, just trying to learn new techniques/strategies.
 
-Competition 1: Placed 500/1500. Needed ensemble model.
-
-Competition 2: In progress.
