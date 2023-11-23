@@ -8,6 +8,6 @@ the actual rating number. However, in both cases it has an edge over the GBM and
 Holds models used in Kaggle competitions. Not competitve, just trying to learn new techniques/strategies.
 
 ## Miss Pricing
-Investigated if there was a statistical argument to vary profit margins by risk class in P&C insurance. Found no evidence as long as the risk classes follow the same distribution. If high risk insureds
+Investigated if there was a statistical argument to vary profit margins by risk class in P&C insurance. Found no evidence as long as the risk classes follow the same distribution. However, if high risk insureds
 follow distributions that vary from the assumed Gamma, they will significantly damage the profitability of the insurers portfolio and should have an increased profit margin to compensate.
 
